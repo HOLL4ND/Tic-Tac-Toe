@@ -38,13 +38,10 @@ public class TicTacToeServer {
             if (command.startsWith("GAMEMODE")) {
                 Boolean isInPVC = command.substring(9, 12).equals("PVC");
                 if (isInPVC) {
-                    // input.close();
                     gameDiff = Integer.parseInt(command.substring(13));
-                    // System.out.println(gameDifficulty);
                     System.out.println("socket distribute: PVC Mode");
                     return 2;
                 } else {
-                    // input.close();
                     System.out.println("socket distribute: PVP Mode");
                     return 1;
                 }
@@ -129,8 +126,9 @@ class PVCGame extends Thread {
     public void run() {
         while (true) {
             Game game = new Game();
+            game.setIsFinish(false);
             game.setGameMode(2);
-            game.setGameDifficulty(this.gameDiffi);
+            game.setGameDifficulty(gameDiffi);
 
             try {
                 PVC_WaitPlayer.acquire(1);
@@ -156,9 +154,18 @@ class Game {
     private Player[] board = new Player[9];
     private int gameDifficulty = -1;// 游戏难度 简单1 中等2 困难3
     private int gameMode = 0;// 游戏模式 1:PVP 2:PVC
+    private Boolean isFinish;
 
     Player currentPlayer;
     Semaphore pvcWait = new Semaphore(0);
+
+    public Boolean getIsFinish() {
+        return isFinish;
+    }
+
+    public void setIsFinish(Boolean isFinish) {
+        this.isFinish = isFinish;
+    }
 
     public int getGameDifficulty() {
         return gameDifficulty;
@@ -296,12 +303,18 @@ class Game {
                 try {
                     System.out.println("wait for human player move");
                     pvcWait.acquire(1);
+                    System.out.println("game difficulty:" + getGameDifficulty());
+                    if (getIsFinish()) {
+                        System.out.println("Game is finish!");
+                        break;
+                    }
                     System.out.println("player has moved,computer processing..");
                     drawBoard(board);
                     // 电脑生成落子点
                     int bestLocation;
                     if (getGameDifficulty() == 3) {
                         bestLocation = findBestMove(charBoard);
+                        System.out.println("bestMove is: " + bestLocation);
                     } else {
                         ArrayList<Integer> empty = getEmptyPlace();
                         Random r = new Random();
@@ -484,6 +497,7 @@ class Game {
                     }
                 }
             }
+
             return (bestMove.row) * 3 + bestMove.col;
         }
 
@@ -574,8 +588,10 @@ class Game {
                     System.out.println("opponent mark:" + opponent.mark);
                     System.out.println("release semp");
                     if (hasWinner()) {
+                        setIsFinish(true);
                         output.println("VICTORY");
                     } else if (boardFilledUp()) {
+                        setIsFinish(true);
                         output.println("TIE");
                     } else {
                         pvcWait.release(1);
