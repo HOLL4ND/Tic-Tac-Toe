@@ -28,6 +28,7 @@ public class TicTacToeServer {
     private final static Semaphore waitSetGameMode = new Semaphore(0);
     private static int gameDiff;
 
+    // 扫描连接的
     public static int distriSocket(Socket socket) throws IOException {
         Scanner input;
         String command;
@@ -54,7 +55,6 @@ public class TicTacToeServer {
     }
 
     public static void main(String[] args) throws Exception {
-        final Semaphore semp = new Semaphore(1);
         final Semaphore pvpSemp = new Semaphore(0);
         final Semaphore pvcSemp = new Semaphore(0);
 
@@ -70,7 +70,6 @@ public class TicTacToeServer {
                 Socket receiveSocket;
                 receiveSocket = listener.accept();
                 disResult = distriSocket(receiveSocket);
-
                 switch (disResult) {
                     case 1:// 人人对战
                         pvpgame.newInSocket = receiveSocket;
@@ -82,26 +81,6 @@ public class TicTacToeServer {
                         pvcSemp.release(1);
                         break;
                 }
-
-                // Game game = new Game();
-                // // 创建一个信号量保证人机对战的初始化
-                // semp.acquire(1);
-                // Game.Player p1 = game.new Player(listener.accept(), 'X');
-                // pool.execute(p1);
-                // // 简陋的等待玩家选择模式后设置游戏的方式,逻辑上和性能上应该不合规范
-                // // 因为要判断玩家的游戏模式需要一段时间,所以要等待
-                // while (game.getGameMode() == 0) {
-                // }
-                // if (game.getGameMode() == 2) {
-                // p1.opponent = game.new Computer(p1.socket, 'O', p1, p1.gameDifficulty,
-                // p1.gameMode);
-                // semp.release(1);
-                // continue;
-                // } else if (game.getGameMode() == 1) {
-                // Game.Player p2 = game.new Player(listener.accept(), 'O');
-                // pool.execute(p2);
-                // semp.release(1);
-                // }
             }
         }
     }
@@ -315,12 +294,11 @@ class Game {
         private void provessMove() throws IOException {
             while (true) {
                 try {
-                    System.out.println("computer print opponent mark:" + opponent.mark);
+                    System.out.println("wait for human player move");
                     pvcWait.acquire(1);
                     System.out.println("player has moved,computer processing..");
                     drawBoard(board);
-                    // System.out.println("computer draw board");
-                    // printCharBoard(charBoard);
+                    // 电脑生成落子点
                     int bestLocation;
                     if (getGameDifficulty() == 3) {
                         bestLocation = findBestMove(charBoard);
@@ -329,16 +307,14 @@ class Game {
                         Random r = new Random();
                         bestLocation = empty.get(r.nextInt(empty.size()));
                     }
-                    System.out.println("best move: " + bestLocation);
+                    // 电脑走棋
                     move(bestLocation, this);
                     printBoard();
                     opponent.output.println("OPPONENT_MOVED " + bestLocation);
                     if (hasWinner()) {
-                        output.println("VICTORY");
                         opponent.output.println("DEFEAT");
                         break;
                     } else if (boardFilledUp()) {
-                        output.println("TIE");
                         opponent.output.println("TIE");
                         break;
                     }
