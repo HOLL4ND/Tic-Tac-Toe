@@ -1,0 +1,4 @@
+INDEX VERSION 1.131+E:\Study\大三\大三下\Java网络编程\CodeFile\shiyan01\workSpace\.metadata\.plugins\org.eclipse.jdt.core
+2442670309.index
+3883950653.index
+212984134.index
