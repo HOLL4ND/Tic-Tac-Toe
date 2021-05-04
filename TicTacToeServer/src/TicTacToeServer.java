@@ -25,7 +25,6 @@ import javax.swing.TransferHandler.TransferSupport;
  * OTHER_PLAYER_LEFT VICTORY DEFEAT TIE MESSAGE <text>
  */
 public class TicTacToeServer {
-    private final static Semaphore waitSetGameMode = new Semaphore(0);
     private static int gameDiff;
 
     // 扫描连接的
@@ -126,19 +125,19 @@ class PVCGame extends Thread {
     public void run() {
         while (true) {
             Game game = new Game();
-            game.setIsFinish(false);
-            game.setGameMode(2);
-            game.setGameDifficulty(gameDiffi);
-
             try {
                 PVC_WaitPlayer.acquire(1);
+                game.setIsFinish(false);
+                game.setGameMode(2);
+                System.out.println("PVCGame Class-> game difficulty" + gameDiffi);
+                game.setGameDifficulty(gameDiffi);
+
                 Game.Player p1 = game.new Player(newInSocket, 'X');
                 p1.gameDifficulty = gameDiffi;
                 Game.Computer aipc = game.new Computer('O', p1);
                 p1.opponent = aipc;
                 pool.execute(p1);
                 pool.execute(aipc);
-
             } catch (InterruptedException e) {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
@@ -202,6 +201,7 @@ class Game {
         return true;
     }
 
+    // 用于寻找空位置，用于简单模式下电脑随机下子
     public ArrayList<Integer> getEmptyPlace() {
         ArrayList<Integer> emptyList = new ArrayList<>();
         for (int i = 0; i < 9; i++) {
@@ -266,14 +266,12 @@ class Game {
 
         char playerMark = 'O', opponentMark = 'X';
         char mark;
-        int gameDifficulty;
 
         Scanner input;
         PrintWriter output;
 
         public Computer(char mark, Player opponent) {
             super(mark, opponent);
-            this.gameDifficulty = opponent.gameDifficulty;
         }
 
         public void run() {
@@ -281,6 +279,8 @@ class Game {
                 provessMove();
             } catch (IOException e) {
                 e.printStackTrace();
+            } finally {
+                System.out.println("computer thread finished.");
             }
         }
 
@@ -301,20 +301,22 @@ class Game {
         private void provessMove() throws IOException {
             while (true) {
                 try {
-                    System.out.println("wait for human player move");
+                    // if (getIsFinish()) {
+                    // break;
+                    // }
+                    System.out.println("wait for player action...");
                     pvcWait.acquire(1);
-                    System.out.println("game difficulty:" + getGameDifficulty());
                     if (getIsFinish()) {
-                        System.out.println("Game is finish!");
                         break;
                     }
-                    System.out.println("player has moved,computer processing..");
+                    // System.out.println("Computer Class-> game difficulty:" +
+                    // getGameDifficulty());
                     drawBoard(board);
                     // 电脑生成落子点
                     int bestLocation;
                     if (getGameDifficulty() == 3) {
                         bestLocation = findBestMove(charBoard);
-                        System.out.println("bestMove is: " + bestLocation);
+                        // System.out.println("bestMove is: " + bestLocation);
                     } else {
                         ArrayList<Integer> empty = getEmptyPlace();
                         Random r = new Random();
@@ -554,13 +556,13 @@ class Game {
             output = new PrintWriter(socket.getOutputStream(), true);
             output.println("WELCOME " + mark);// char mark = response.charAt(8);客户端代码
             if (mark == 'X') {
-                System.out.println("Mark is X");
+                // System.out.println("Mark is X");
                 currentPlayer = this;
                 if (1 == gameMode) {
                     output.println("MESSAGE Waiting for opponent to connect");
                 }
             } else {
-                System.out.println("Mark is O");
+                // System.out.println("Mark is O");
                 opponent = currentPlayer;
                 opponent.opponent = this;
                 opponent.output.println("MESSAGE Your move");
@@ -572,6 +574,9 @@ class Game {
             while (input.hasNextLine()) {
                 command = input.nextLine();
                 if (command.startsWith("QUIT")) {
+                    System.out.println("player left");
+                    setIsFinish(true);
+                    pvcWait.release(1);
                     return;
                 } else if (command.startsWith("MOVE")) {// out.println("MOVE " + j);客户端代码
                     processMoveCommand(Integer.parseInt(command.substring(5)));
@@ -583,16 +588,18 @@ class Game {
             try {
                 move(location, this);
                 output.println("VALID_MOVE");
-                System.out.println(gameMode);
                 if (2 == gameMode) {
-                    System.out.println("opponent mark:" + opponent.mark);
                     System.out.println("release semp");
                     if (hasWinner()) {
                         setIsFinish(true);
                         output.println("VICTORY");
+                        pvcWait.release(1);
+
                     } else if (boardFilledUp()) {
                         setIsFinish(true);
                         output.println("TIE");
+                        pvcWait.release(1);
+
                     } else {
                         pvcWait.release(1);
                     }

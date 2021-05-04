@@ -20,7 +20,8 @@ import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
-
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import jdk.internal.platform.Container;
 
 /**
@@ -37,6 +38,8 @@ import jdk.internal.platform.Container;
  */
 public class TicTacToeClient extends Thread {
 
+	static TicTacToeClient client;
+
 	private JFrame frame = new JFrame("Tic Tac Toe");
 	private JLabel messageLabel = new JLabel("...");
 
@@ -49,6 +52,7 @@ public class TicTacToeClient extends Thread {
 
 	private static String gameMode = "";
 	private static int gameDifficulty = 0;
+	private static boolean isWindowClosed;
 
 	public TicTacToeClient(String serverAddress) throws Exception {
 
@@ -96,7 +100,7 @@ public class TicTacToeClient extends Thread {
 			char mark = response.charAt(8);
 			char opponentMark = mark == 'X' ? 'O' : 'X';
 			frame.setTitle("Tic Tac Toe: Player " + mark);
-			while (in.hasNextLine()) {
+			while (in.hasNextLine() && !isWindowClosed) {
 				response = in.nextLine();
 				if (response.startsWith("VALID_MOVE")) {
 					messageLabel.setText("Valid move, please wait");
@@ -123,10 +127,12 @@ public class TicTacToeClient extends Thread {
 					break;
 				}
 			}
+			System.out.println("player quit");
 			out.println("QUIT");
 		} catch (Exception e) {
 			e.printStackTrace();
 		} finally {
+			System.out.println("Player thread finally execute.");
 			try {
 				socket.close();
 			} catch (IOException e) {
@@ -138,9 +144,6 @@ public class TicTacToeClient extends Thread {
 	}
 
 	static class Square extends JPanel {
-		/**
-		 * 
-		 */
 		private static final long serialVersionUID = 1L;
 		JLabel label = new JLabel();
 
@@ -155,6 +158,24 @@ public class TicTacToeClient extends Thread {
 			label.setForeground(text == 'X' ? Color.BLUE : Color.RED);
 			label.setText(text + "");
 		}
+	}
+
+	static void startGame(final String address) throws Exception {
+		client = new TicTacToeClient(address);
+		client.frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		client.frame.setSize(320, 320);
+		client.frame.setResizable(false);
+		client.frame.setVisible(true);// 显示游戏界面
+		client.frame.addWindowListener(new WindowAdapter() {
+			public void windowClosing(WindowEvent e) {
+				System.out.println("game windows is closing");
+				isWindowClosed = true;
+				client.out.println("QUIT");
+			}
+		});
+		isWindowClosed = false;
+		client.start();
+
 	}
 
 	static class startFrame {
@@ -202,30 +223,22 @@ public class TicTacToeClient extends Thread {
 			sft.setVisible(false);
 
 			final JButton easy = new JButton("简单");
-			// final JButton moderate = new JButton("中等");
 			final JButton difficult = new JButton("困难");
 
 			difficultyLevels.add(easy);
-			// difficultyLevels.add(moderate);
 			difficultyLevels.add(difficult);
 			startUp.getContentPane().add(difficultyLevels, BorderLayout.CENTER);
 
 			difficultyLevels.setVisible(false);
-
+			startUp.setVisible(true);
 			pvpbutton.addMouseListener(new MouseAdapter() {
 				public void mousePressed(MouseEvent e) {
 					System.out.println("pvp button click");
 					gameMode = "PVP";
 					startUp.setVisible(false);// 模式选择界面隐藏
 
-					TicTacToeClient client;
 					try {
-						client = new TicTacToeClient(address);
-						client.frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-						client.frame.setSize(320, 320);
-						client.frame.setResizable(false);
-						client.frame.setVisible(true);// 显示游戏界面
-						client.start();
+						startGame(address);
 					} catch (Exception e1) {
 						// TODO 自动生成的 catch 块
 						e1.printStackTrace();
@@ -246,52 +259,8 @@ public class TicTacToeClient extends Thread {
 					System.out.println("difficulty: easy");
 					gameDifficulty = 1;
 					startUp.setVisible(false);// 模式选择界面隐藏
-					TicTacToeClient client;
 					try {
-						client = new TicTacToeClient(address);
-						client.frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-						client.frame.setSize(320, 320);
-						client.frame.setResizable(false);
-						client.frame.setVisible(true);// 显示游戏界面
-						client.start();
-					} catch (Exception e1) {
-						// TODO 自动生成的 catch 块
-						e1.printStackTrace();
-					}
-				}
-			});
-			// moderate.addMouseListener(new MouseAdapter() {
-			// 	public void mousePressed(MouseEvent e) {
-			// 		System.out.println("difficulty: moderate");
-			// 		gameDifficulty = 2;
-			// 		startUp.setVisible(false);// 模式选择界面隐藏
-			// 		TicTacToeClient client;
-			// 		try {
-			// 			client = new TicTacToeClient(address);
-			// 			client.frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-			// 			client.frame.setSize(320, 320);
-			// 			client.frame.setResizable(false);
-			// 			client.frame.setVisible(true);// 显示游戏界面
-			// 			client.start();
-			// 		} catch (Exception e1) {
-			// 			// TODO 自动生成的 catch 块
-			// 			e1.printStackTrace();
-			// 		}
-			// 	}
-			// });
-			difficult.addMouseListener(new MouseAdapter() {
-				public void mousePressed(MouseEvent e) {
-					System.out.println("difficulty: difficult");
-					gameDifficulty = 3;
-					startUp.setVisible(false);// 模式选择界面隐藏
-					TicTacToeClient client;
-					try {
-						client = new TicTacToeClient(address);
-						client.frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-						client.frame.setSize(320, 320);
-						client.frame.setResizable(false);
-						client.frame.setVisible(true);// 显示游戏界面
-						client.start();
+						startGame(address);
 					} catch (Exception e1) {
 						// TODO 自动生成的 catch 块
 						e1.printStackTrace();
@@ -299,7 +268,20 @@ public class TicTacToeClient extends Thread {
 				}
 			});
 
-			startUp.setVisible(true);
+			difficult.addMouseListener(new MouseAdapter() {
+				public void mousePressed(MouseEvent e) {
+					System.out.println("difficulty: difficult");
+					gameDifficulty = 3;
+					startUp.setVisible(false);// 模式选择界面隐藏
+					try {
+						startGame(address);
+					} catch (Exception e1) {
+						// TODO 自动生成的 catch 块
+						e1.printStackTrace();
+					}
+				}
+			});
+
 		}
 
 	}
