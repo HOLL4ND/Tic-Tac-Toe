@@ -8,7 +8,7 @@
 - 人人对战
 - 人机对战（简单模式和困难模式）
 
-
+![](https://github.com/HOLL4ND/tic-tac-toe/blob/master/Image/startwindow.png)
 
 ### 用例说明：
 
