@@ -27,7 +27,7 @@ import javax.swing.TransferHandler.TransferSupport;
 public class TicTacToeServer {
     private static int gameDiff;
 
-    // 扫描连接的
+    // 扫描连接的Socket,并进行分发处理
     public static int distriSocket(Socket socket) throws IOException {
         Scanner input;
         String command;
@@ -51,12 +51,14 @@ public class TicTacToeServer {
     }
 
     public static void main(String[] args) throws Exception {
+        // Game等待用户的进入再开始设置游戏
         final Semaphore pvpSemp = new Semaphore(0);
         final Semaphore pvcSemp = new Semaphore(0);
 
         int disResult;
         try (ServerSocket listener = new ServerSocket(58901)) {
             System.out.println("Tic Tac Toe Server is Running...");
+            // 创建两个线程,分别用于处理PVP和PVC的游戏
             PVPGame pvpgame = new PVPGame(pvpSemp);
             PVCGame pvcgame = new PVCGame(pvcSemp);
             pvpgame.start();
@@ -64,8 +66,8 @@ public class TicTacToeServer {
 
             while (true) {
                 Socket receiveSocket;
-                receiveSocket = listener.accept();
-                disResult = distriSocket(receiveSocket);
+                receiveSocket = listener.accept();// 等待客户端的连接
+                disResult = distriSocket(receiveSocket);// 判断用户选择的游戏模式,并将收到的socket传入对应的线程
                 switch (disResult) {
                     case 1:// 人人对战
                         pvpgame.newInSocket = receiveSocket;
@@ -82,13 +84,14 @@ public class TicTacToeServer {
     }
 }
 
+// 处理PVP游戏的线程
 class PVPGame extends Thread {
     ExecutorService pool = Executors.newFixedThreadPool(200);
     Socket newInSocket;
-    Semaphore PVP_WaitPlayer;
+    Semaphore PVP_waitPlayer;// 信号量 作用:等待用户进入 释放源:由main线程释放
 
     public PVPGame(Semaphore waitPlayer) {
-        this.PVP_WaitPlayer = waitPlayer;
+        this.PVP_waitPlayer = waitPlayer;
     }
 
     public void run() {
@@ -96,11 +99,11 @@ class PVPGame extends Thread {
             Game game = new Game();
             game.setGameMode(1);
             try {
-                PVP_WaitPlayer.acquire(1);
+                PVP_waitPlayer.acquire(1);
                 Game.Player p1 = game.new Player(newInSocket, 'X');
                 pool.execute(p1);
 
-                PVP_WaitPlayer.acquire(1);
+                PVP_waitPlayer.acquire(1);
                 Game.Player p2 = game.new Player(newInSocket, 'O');
                 pool.execute(p2);
 
@@ -112,10 +115,11 @@ class PVPGame extends Thread {
     }
 }
 
+// 处理PVC游戏的线程
 class PVCGame extends Thread {
     ExecutorService pool = Executors.newFixedThreadPool(200);
     Socket newInSocket;
-    Semaphore PVC_WaitPlayer;
+    Semaphore PVC_WaitPlayer;// 信号量 作用:等待用户进入 释放源:由main线程释放
     int gameDiffi;
 
     public PVCGame(Semaphore PVC_WaitPlayer) {
@@ -150,13 +154,13 @@ class PVCGame extends Thread {
 class Game {
 
     // Board cells numbered 0-8, top to bottom, left to right; null if empty
-    private Player[] board = new Player[9];
+    private Player[] board = new Player[9];// 游戏棋盘,记录双方落子点
     private int gameDifficulty = -1;// 游戏难度 简单1 中等2 困难3
     private int gameMode = 0;// 游戏模式 1:PVP 2:PVC
-    private Boolean isFinish;
+    private Boolean isFinish;// 用于Computer类判断游戏是否结束
 
-    Player currentPlayer;
-    Semaphore pvcWait = new Semaphore(0);
+    Player currentPlayer;// 记录当前下子玩家
+    Semaphore pvcWait = new Semaphore(0);// 信号量 用于电脑等待玩家的行为(下子&退出游戏)
 
     public Boolean getIsFinish() {
         return isFinish;
@@ -193,6 +197,7 @@ class Game {
                 || (board[2] != null && board[2] == board[4] && board[2] == board[6]);
     }
 
+    // 用于在判和中判断棋盘是否被填满
     public boolean boardFilledUp() {
         for (int i = 0; i < 9; i++) {
             if (board[i] == null)
@@ -227,6 +232,7 @@ class Game {
 
     }
 
+    // 输出不同格式棋盘的函数
     public void printBoard() {
         for (int i = 0; i < 9; i++) {
             System.out.print(board[i] == null ? '_' : board[i].mark);
@@ -258,17 +264,8 @@ class Game {
     }
 
     class Computer extends Player {
-        private char charBoard[][] = new char[3][3];
 
-        class Move {
-            int row, col;
-        };
-
-        char playerMark = 'O', opponentMark = 'X';
         char mark;
-
-        Scanner input;
-        PrintWriter output;
 
         public Computer(char mark, Player opponent) {
             super(mark, opponent);
@@ -280,42 +277,46 @@ class Game {
             } catch (IOException e) {
                 e.printStackTrace();
             } finally {
-                System.out.println("computer thread finished.");
+                System.out.println("computer thread finished.");// 验证电脑线程是否退出
             }
         }
 
-        private void drawBoard(Player[] board) {
+        private char[][] drawCharBoard(Player[] board) {
+            /**
+             * 因为GFG类中查找最优下棋位置的函数接受的是一个二维Char数组 所以要将 当前棋盘的状态转换为二维Char数组
+             * 
+             * @param board 当前Game中的棋盘board.
+             * @return 表示棋盘的二维Char数组.
+             */
+            char[][] charBoardTemp = new char[3][3];
             int index = 0;
             for (int i = 0; i < 3; i++) {
                 for (int j = 0; j < 3; j++) {
                     if (board[index] != null) {
-                        charBoard[i][j] = board[index].mark;
+                        charBoardTemp[i][j] = board[index].mark;
                     } else {
-                        charBoard[i][j] = '_';
+                        charBoardTemp[i][j] = '_';
                     }
                     index++;
                 }
             }
+            return charBoardTemp;
         }
 
         private void provessMove() throws IOException {
             while (true) {
                 try {
-                    // if (getIsFinish()) {
-                    // break;
-                    // }
                     System.out.println("wait for player action...");
                     pvcWait.acquire(1);
                     if (getIsFinish()) {
                         break;
                     }
-                    // System.out.println("Computer Class-> game difficulty:" +
-                    // getGameDifficulty());
-                    drawBoard(board);
                     // 电脑生成落子点
                     int bestLocation;
                     if (getGameDifficulty() == 3) {
-                        bestLocation = findBestMove(charBoard);
+                        char charBoard[][] = new char[3][3];
+                        charBoard = drawCharBoard(board);
+                        bestLocation = GFG.getBestMove(charBoard);
                         // System.out.println("bestMove is: " + bestLocation);
                     } else {
                         ArrayList<Integer> empty = getEmptyPlace();
@@ -341,168 +342,6 @@ class Game {
 
             }
         }
-
-        Boolean isMovesLeft(char board[][]) {
-            for (int i = 0; i < 3; i++)
-                for (int j = 0; j < 3; j++)
-                    if (board[i][j] == '_')
-                        return true;
-            return false;
-        }
-
-        // This is the evaluation function as discussed
-        // in the previous article ( http://goo.gl/sJgv68 )
-        int evaluate(char b[][]) {
-            // Checking for Rows for X or O victory.
-            for (int row = 0; row < 3; row++) {
-                if (b[row][0] == b[row][1] && b[row][1] == b[row][2]) {
-                    if (b[row][0] == playerMark)
-                        return +10;
-                    else if (b[row][0] == opponentMark)
-                        return -10;
-                }
-            }
-
-            // Checking for Columns for X or O victory.
-            for (int col = 0; col < 3; col++) {
-                if (b[0][col] == b[1][col] && b[1][col] == b[2][col]) {
-                    if (b[0][col] == playerMark)
-                        return +10;
-
-                    else if (b[0][col] == opponentMark)
-                        return -10;
-                }
-            }
-
-            // Checking for Diagonals for X or O victory.
-            if (b[0][0] == b[1][1] && b[1][1] == b[2][2]) {
-                if (b[0][0] == playerMark)
-                    return +10;
-                else if (b[0][0] == opponentMark)
-                    return -10;
-            }
-
-            if (b[0][2] == b[1][1] && b[1][1] == b[2][0]) {
-                if (b[0][2] == playerMark)
-                    return +10;
-                else if (b[0][2] == opponentMark)
-                    return -10;
-            }
-
-            // Else if none of them have won then return 0
-            return 0;
-        }
-
-        // This is the minimax function. It considers all
-        // the possible ways the game can go and returns
-        // the value of the board
-        int minimax(char board[][], int depth, Boolean isMax) {
-            int score = evaluate(board);
-
-            // If Maximizer has won the game
-            // return his/her evaluated score
-            if (score == 10)
-                return score;
-
-            // If Minimizer has won the game
-            // return his/her evaluated score
-            if (score == -10)
-                return score;
-
-            // If there are no more moves and
-            // no winner then it is a tie
-            if (isMovesLeft(board) == false)
-                return 0;
-
-            // If this maximizer's move
-            if (isMax) {
-                int best = -1000;
-
-                // Traverse all cells
-                for (int i = 0; i < 3; i++) {
-                    for (int j = 0; j < 3; j++) {
-                        // Check if cell is empty
-                        if (board[i][j] == '_') {
-                            // Make the move
-                            board[i][j] = playerMark;
-
-                            // Call minimax recursively and choose
-                            // the maximum value
-                            best = Math.max(best, minimax(board, depth + 1, !isMax));
-
-                            // Undo the move
-                            board[i][j] = '_';
-                        }
-                    }
-                }
-                return best;
-            }
-
-            // If this minimizer's move
-            else {
-                int best = 1000;
-
-                // Traverse all cells
-                for (int i = 0; i < 3; i++) {
-                    for (int j = 0; j < 3; j++) {
-                        // Check if cell is empty
-                        if (board[i][j] == '_') {
-                            // Make the move
-                            board[i][j] = opponentMark;
-
-                            // Call minimax recursively and choose
-                            // the minimum value
-                            best = Math.min(best, minimax(board, depth + 1, !isMax));
-
-                            // Undo the move
-                            board[i][j] = '_';
-                        }
-                    }
-                }
-                return best;
-            }
-        }
-
-        // This will return the best possible
-        // move for the player
-        int findBestMove(char board[][]) {
-            int bestVal = -1000;
-            Move bestMove = new Move();
-            bestMove.row = -1;
-            bestMove.col = -1;
-
-            // Traverse all cells, evaluate minimax function
-            // for all empty cells. And return the cell
-            // with optimal value.
-            for (int i = 0; i < 3; i++) {
-                for (int j = 0; j < 3; j++) {
-                    // Check if cell is empty
-                    if (board[i][j] == '_') {
-                        // Make the move
-                        board[i][j] = playerMark;
-
-                        // compute evaluation function for this
-                        // move.
-                        int moveVal = minimax(board, 0, false);
-
-                        // Undo the move
-                        board[i][j] = '_';
-
-                        // If the value of the current move is
-                        // more than the best value, then update
-                        // best/
-                        if (moveVal > bestVal) {
-                            bestMove.row = i;
-                            bestMove.col = j;
-                            bestVal = moveVal;
-                        }
-                    }
-                }
-            }
-
-            return (bestMove.row) * 3 + bestMove.col;
-        }
-
     }
 
     /**
