@@ -5,7 +5,7 @@ public class GFG {
         int row, col;
     };
 
-    static char player = 'x', opponent = 'o';
+    static char player = 'O', opponent = 'X';
 
     // This function returns true if there are moves
     // remaining on the board. It returns false if
