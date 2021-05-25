@@ -6,6 +6,7 @@ import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.lang.ProcessBuilder.Redirect.Type;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -45,6 +46,37 @@ public class TicTacToeServer {
         input = new Scanner(socket.getInputStream());
         while (input.hasNextLine()) {
             command = input.nextLine();
+            System.out.println(command);
+            if (command.startsWith("LOGIN")) {
+
+                String path = "D:\\user.txt";
+                DataInputStream is = null;
+                DataOutputStream os = null;
+
+                is = new DataInputStream(socket.getInputStream());
+                os = new DataOutputStream(socket.getOutputStream());
+
+                login(is, os, path, socket, command);
+
+                os.close();
+                is.close();
+                return 4;
+            }
+            if (command.startsWith("REGIS")) {
+                String path = "D:\\user.txt";
+                DataInputStream is = null;
+                DataOutputStream os = null;
+
+                is = new DataInputStream(socket.getInputStream());
+                os = new DataOutputStream(socket.getOutputStream());
+
+                register(is, os, path, command);
+
+                os.close();
+                is.close();
+                return 4;
+
+            }
             if (command.startsWith("GAMEMODE")) {
                 Boolean isInPVC = command.substring(9, 12).equals("PVC");
                 if (isInPVC) {
@@ -60,46 +92,50 @@ public class TicTacToeServer {
 
         return 0;
     }
-    
-    public static void register(DataInputStream is,DataOutputStream os,String path) {
+
+    public static void register(DataInputStream is, DataOutputStream os, String path, String ur_pwd) {
         BufferedWriter writer;
-		try {
-			writer = new BufferedWriter(new FileWriter(path));
-			//读取客户端输入的信息,输出到 user.txt 数据库中
-			String[] str = is.readUTF().split("=");
-			String name = str[0];
-			String pwd = str[1];
-			writer.write("user="+name);
-			writer.newLine();
-			writer.write("pass="+pwd);
-			writer.close();//关闭缓冲流，才会写出数据
-			//像客户端反馈注册结果消息
-			os.writeUTF("恭喜注册成功！如果需要重新登录，请输入 \"2\"");
- 
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+        try {
+            writer = new BufferedWriter(new FileWriter(path));
+            // 读取客户端输入的信息,输出到 user.txt 数据库中
+            String[] str = ur_pwd.split("=");
+            String name = str[0].substring(6);
+            String pwd = str[1];
+            writer.write("user=" + name);
+            writer.newLine();
+            writer.write("pass=" + pwd);
+            writer.close();// 关闭缓冲流，才会写出数据
+            // 像客户端反馈注册结果消息
+            os.writeUTF("恭喜注册成功！如果需要重新登录");
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
-    public static void login(DataInputStream is,DataOutputStream os,String path,Socket socket) {
+    public static void login(DataInputStream is, DataOutputStream os, String path, Socket socket, String ur_pwd) {
         try {
-            //读取客户端输入的信息
-            String[] str = is.readUTF().split("=");
-            String name = str[0];
+            // 读取客户端输入的信息
+            String[] str = ur_pwd.split("=");
+
+            String name = str[0].substring(6);
+
             String pwd = str[1];
-            //读取文本数据信息
+            System.out.println("name:" + name + "&");
+            System.out.println("pwd:" + pwd + "&");
+            // 读取文本数据信息
             FileInputStream fis = new FileInputStream(path);
             Properties pros = new Properties();
-            pros.load( fis );
-            String user = pros.getProperty( "user" );
-            String pass = pros.getProperty( "pass" );
-            //验证客户端输入的信息和文本数据信息是否一致。
+            pros.load(fis);
+            String user = pros.getProperty("user");
+            String pass = pros.getProperty("pass");
+
+            // 验证客户端输入的信息和文本数据信息是否一致。
             if (name.equals(user) && pwd.equals(pass)) {
                 os.writeUTF("登录成功！");
-            }else {
-                //向客户端发送消息，询问是否需要注册。
-                os.writeUTF("账户或密码错误或不存在，登录失败！如果需要注册，请输入  \"1\" ");
-                register(is,os, path);//注册
+            } else {
+                // 向客户端发送消息，询问是否需要注册。
+                os.writeUTF("账户或密码错误或不存在，登录失败! 请输入用户名和密码 并点击注册按钮");
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -118,26 +154,18 @@ public class TicTacToeServer {
             // 创建两个线程,分别用于处理PVP和PVC的游戏
             PVPGame pvpgame = new PVPGame(pvpSemp);
             PVCGame pvcgame = new PVCGame(pvcSemp);
-            pvpgame.start(); 
+            pvpgame.start();
             pvcgame.start();
-        
-            String path = "D:\\user.txt";
-            DataInputStream is = null;
-            DataOutputStream os = null;
+
+            int cnt = 0;
 
             while (true) {
                 Socket receiveSocket;
                 receiveSocket = listener.accept();// 等待客户端的连接
-
-                is = new DataInputStream(receiveSocket.getInputStream());
-                os = new DataOutputStream(receiveSocket.getOutputStream()); 
-                
-                login(is, os, path, receiveSocket);
-
-                os.close();  
-        		is.close();
+                System.out.println("test 123");
 
                 disResult = distriSocket(receiveSocket);// 判断用户选择的游戏模式,并将收到的socket传入对应的线程
+                System.out.println("disResult:" + disResult);
                 switch (disResult) {
                     case 1:// 人人对战
                         pvpgame.newInSocket = receiveSocket;
@@ -147,6 +175,9 @@ public class TicTacToeServer {
                         pvcgame.newInSocket = receiveSocket;
                         pvcgame.gameDiffi = gameDiff;
                         pvcSemp.release(1);
+                        break;
+                    case 4:
+
                         break;
                 }
             }
