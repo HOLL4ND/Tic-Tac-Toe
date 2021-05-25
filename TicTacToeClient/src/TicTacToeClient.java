@@ -33,7 +33,6 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import jdk.internal.platform.Container;
 
-
 /**
  * A client for a multi-player tic tac toe game. Loosely based on an example in
  * Deitel and Deitel's "Java How to Program" book. For this project I created a
@@ -297,82 +296,82 @@ public class TicTacToeClient extends Thread {
 
 	}
 
-	// 登录类	
+	// 登录类
 	static class startLogin {
 		public startLogin() {
 			// 登录窗口：
 			final JFrame login = new JFrame("登录");
-			login.setSize(350,170);
-			//login.setResizable(false);
+			login.setSize(350, 170);
+			// login.setResizable(false);
 			login.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 			JPanel panel = new JPanel();
 			login.add(panel);
-			
+
 			// 设置布局为null
 			panel.setLayout(null);
 
 			// 创建JLabel组件与设置位置
 			JLabel userLabel = new JLabel("Username: ");
-			userLabel.setBounds(10,20,80,25);
+			userLabel.setBounds(10, 20, 80, 25);
 			panel.add(userLabel);
 
 			// 用户文本域
 			final JTextField userText = new JTextField(20);
-			userText.setBounds(100,20,165,25);
+			userText.setBounds(100, 20, 165, 25);
 			panel.add(userText);
 
 			// 密码文本域
 			JLabel passwordLable = new JLabel("Password: ");
-			passwordLable.setBounds(10,50,80,25);
+			passwordLable.setBounds(10, 50, 80, 25);
 			panel.add(passwordLable);
 
 			// 类似输入的文本域，但会用*代替
 			final JPasswordField passwordText = new JPasswordField();
-			passwordText.setBounds(100,50,165,25);
+			passwordText.setBounds(100, 50, 165, 25);
 			panel.add(passwordText);
 
 			// login 按钮
 			final JButton loginButton = new JButton("Login");
-			loginButton.setBounds(100,80,80,25);
-			
-			//登录按钮监听
+			loginButton.setBounds(100, 80, 80, 25);
+
+			// 登录按钮监听
 			loginButton.addActionListener(new ActionListener() {
 				public void actionPerformed(ActionEvent e) {
 					try {
-						//获取输入框的账户密码
+						// 获取输入框的账户密码
 						String username = userText.getText();
 						String password = new String(passwordText.getPassword());
 
-						if(LoginMain(username, password) == 1) {
-							JOptionPane.showMessageDialog(null, "登录成功！");  
+						if (LoginMain(username, password) == 1) {
+							JOptionPane.showMessageDialog(null, "登录成功！");
 							System.out.println("登录成功！");
 							login.setVisible(false);
 
 							startFrame st = new startFrame(IP_Adr);
 						} else {
-							JOptionPane.showMessageDialog(null, "账号或密码错误！");  
+							JOptionPane.showMessageDialog(null, "账号或密码错误！");
 							System.out.println("账号或密码错误！");
 						}
 					} catch (Exception ex) {
 						System.out.println(ex.toString());
 					}
 				}
-			}); 
+			});
 
 			panel.add(loginButton);
 
 			// register 按钮
 			JButton registerButton = new JButton("Register");
-			registerButton.setBounds(185,80,80,25);
+			registerButton.setBounds(185, 80, 80, 25);
 
-			//注册按钮监听
+			// 注册按钮监听
 			registerButton.addActionListener(new ActionListener() {
 				public void actionPerformed(ActionEvent e) {
 					try {
-						//获取输入框的账户密码
+						// 获取输入框的账户密码
 						String username = userText.getText();
 						String password = new String(passwordText.getPassword());
-						if(username.equals("") || password.equals("")) {
+						if (username.equals("") || password.equals("")) {
 							JOptionPane.showMessageDialog(null, "账号或密码不能为空！");
 							System.out.println("账号或密码不能为空！");
 							return;
@@ -395,23 +394,36 @@ public class TicTacToeClient extends Thread {
 		public final static int Port = 58901;
 		public final static String IP_Adr = "127.0.0.1";
 
-		//注册通信
-		private static void TmpRegister(DataInputStream is, DataOutputStream os, String ur, String ps) throws IOException {
+		// 注册通信
+		private static void TmpRegister(DataInputStream is, DataOutputStream os, Socket socket, String ur, String ps)
+				throws IOException {
+			PrintWriter out;
+			out = new PrintWriter(socket.getOutputStream(), true);
+
 			String mes = ur + "=" + ps;
+
+			out.println("REGIS " + mes);
+
 			os.writeUTF(mes);
 			String ret = is.readUTF();
+
 			System.out.println(ret);
 		}
 
-		//登录通信验证
-		private static int TmpLogin(DataInputStream is, DataOutputStream os, Socket socket, String ur, String ps) throws IOException {
+		// 登录通信验证
+		private static int TmpLogin(DataInputStream is, DataOutputStream os, Socket socket, String ur, String ps)
+				throws IOException {
+			PrintWriter out;
+			out = new PrintWriter(socket.getOutputStream(), true);
 			String mes = ur + "=" + ps;
-			os.writeUTF(mes);
+			// os.writeUTF("LOGIN " + mes + '\n');
+			out.println("LOGIN " + mes);
+			// os.writeUTF(mes);
 			String ret = is.readUTF();
 			System.out.println(ret);
 
 			socket.close();
-			if(ret.equals("登录成功！")) {
+			if (ret.equals("登录成功！")) {
 				return 1;
 			} else {
 				return 0;
@@ -421,37 +433,37 @@ public class TicTacToeClient extends Thread {
 		static public int LoginMain(String ur, String ps) throws UnknownHostException, IOException {
 			DataInputStream is = null;
 			DataOutputStream os = null;
-			
-			Socket socket = new Socket(IP_Adr,Port);
+
+			Socket socket = new Socket(IP_Adr, Port);
+
 			is = new DataInputStream(socket.getInputStream());
 			os = new DataOutputStream(socket.getOutputStream());
 
-			return TmpLogin(is, os, socket, ur, ps); //是否登录成功
+			return TmpLogin(is, os, socket, ur, ps); // 是否登录成功
 		}
 
 		static public void ResgisMain(String ur, String ps) throws UnknownHostException, IOException {
 			DataInputStream is = null;
 			DataOutputStream os = null;
-			
-			Socket socket = new Socket(IP_Adr,Port);
+
+			Socket socket = new Socket(IP_Adr, Port);
 
 			is = new DataInputStream(socket.getInputStream());
 			os = new DataOutputStream(socket.getOutputStream());
-			
-			TmpRegister(is, os, ur, ps);
+
+			TmpRegister(is, os, socket, ur, ps);
 		}
 
 	}
 
-
 	public static void main(String[] args) throws Exception {
 		String tmp = "127.0.0.1";
 		// if (args.length != 1) {
-		// 	System.err.println("Pass the server IP as the sole command line argument");
-		// 	return;
+		// System.err.println("Pass the server IP as the sole command line argument");
+		// return;
 		// }
-		
-		//startFrame startWindow = new startFrame(tmp);
+
+		// startFrame startWindow = new startFrame(tmp);
 		startLogin SL = new startLogin();
 	}
 }
