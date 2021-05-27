@@ -185,72 +185,74 @@ public class TicTacToeServer {
     }
 }
 
+// 这里的类从内部类改成了外部类,删除外部类后取消注释可用
+
 // 处理PVP游戏的线程
-class PVPGame extends Thread {
-    ExecutorService pool = Executors.newFixedThreadPool(200);
-    Socket newInSocket;
-    Semaphore PVP_waitPlayer;// 信号量 作用:等待用户进入 释放源:由main线程释放
-
-    public PVPGame(Semaphore waitPlayer) {
-        this.PVP_waitPlayer = waitPlayer;
-    }
-
-    public void run() {
-        while (true) {
-            Game game = new Game();
-            game.setGameMode(1);
-            try {
-                PVP_waitPlayer.acquire(1);
-                Game.Player p1 = game.new Player(newInSocket, 'X');
-                pool.execute(p1);
-
-                PVP_waitPlayer.acquire(1);
-                Game.Player p2 = game.new Player(newInSocket, 'O');
-                pool.execute(p2);
-
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-
-        }
-    }
-}
+// class PVPGame extends Thread {
+// ExecutorService pool = Executors.newFixedThreadPool(200);
+// Socket newInSocket;
+// Semaphore PVP_waitPlayer;// 信号量 作用:等待用户进入 释放源:由main线程释放
+//
+// public PVPGame(Semaphore waitPlayer) {
+// this.PVP_waitPlayer = waitPlayer;
+// }
+//
+// public void run() {
+// while (true) {
+// Game game = new Game();
+// game.setGameMode(1);
+// try {
+// PVP_waitPlayer.acquire(1);
+// Game.Player p1 = game.new Player(newInSocket, 'X');
+// pool.execute(p1);
+//
+// PVP_waitPlayer.acquire(1);
+// Game.Player p2 = game.new Player(newInSocket, 'O');
+// pool.execute(p2);
+//
+// } catch (InterruptedException e) {
+// e.printStackTrace();
+// }
+//
+// }
+// }
+// }
 
 // 处理PVC游戏的线程
-class PVCGame extends Thread {
-    ExecutorService pool = Executors.newFixedThreadPool(200);
-    Socket newInSocket;
-    Semaphore PVC_WaitPlayer;// 信号量 作用:等待用户进入 释放源:由main线程释放
-    int gameDiffi;
-
-    public PVCGame(Semaphore PVC_WaitPlayer) {
-        this.PVC_WaitPlayer = PVC_WaitPlayer;
-    }
-
-    public void run() {
-        while (true) {
-            Game game = new Game();
-            try {
-                PVC_WaitPlayer.acquire(1);
-                game.setIsFinish(false);
-                game.setGameMode(2);
-                System.out.println("PVCGame Class-> game difficulty" + gameDiffi);
-                game.setGameDifficulty(gameDiffi);
-
-                Game.Player p1 = game.new Player(newInSocket, 'X');
-                p1.gameDifficulty = gameDiffi;
-                Game.Computer aipc = game.new Computer('O', p1);
-                p1.opponent = aipc;
-                pool.execute(p1);
-                pool.execute(aipc);
-            } catch (InterruptedException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            }
-
-        }
-    }
-}
+// class PVCGame extends Thread {
+// ExecutorService pool = Executors.newFixedThreadPool(200);
+// Socket newInSocket;
+// Semaphore PVC_WaitPlayer;// 信号量 作用:等待用户进入 释放源:由main线程释放
+// int gameDiffi;
+//
+// public PVCGame(Semaphore PVC_WaitPlayer) {
+// this.PVC_WaitPlayer = PVC_WaitPlayer;
+// }
+//
+// public void run() {
+// while (true) {
+// Game game = new Game();
+// try {
+// PVC_WaitPlayer.acquire(1);
+// game.setIsFinish(false);
+// game.setGameMode(2);
+// System.out.println("PVCGame Class-> game difficulty" + gameDiffi);
+// game.setGameDifficulty(gameDiffi);
+//
+// Game.Player p1 = game.new Player(newInSocket, 'X');
+// p1.gameDifficulty = gameDiffi;
+// Game.Computer aipc = game.new Computer('O', p1);
+// p1.opponent = aipc;
+// pool.execute(p1);
+// pool.execute(aipc);
+// } catch (InterruptedException e) {
+// // TODO Auto-generated catch block
+// e.printStackTrace();
+// }
+//
+// }
+// }
+// }
 
 class Game {
 
@@ -287,6 +289,7 @@ class Game {
         this.gameDifficulty = difficulty;
     }
 
+    // 判赢函数
     public boolean hasWinner() {
         return (board[0] != null && board[0] == board[1] && board[0] == board[2])
                 || (board[3] != null && board[3] == board[4] && board[3] == board[5])
@@ -318,6 +321,7 @@ class Game {
         return emptyList;
     }
 
+    // 系统用于处理玩家移动（玩家在鼠标点击棋盘后的处理）
     public synchronized void move(int location, Player player) {
         if (player != currentPlayer) {
             throw new IllegalStateException("Not your turn");
@@ -364,6 +368,7 @@ class Game {
         }
     }
 
+    // 电脑类 继承Player
     class Computer extends Player {
 
         char mark;

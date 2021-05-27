@@ -13,7 +13,7 @@ public class GFG {
     static Boolean isMovesLeft(char board[][]) {
         for (int i = 0; i < 3; i++)
             for (int j = 0; j < 3; j++)
-                if (board[i][j] == '_')
+                if (board[i][j] == '_') 
                     return true;
         return false;
     }
@@ -180,7 +180,7 @@ public class GFG {
 
     // Driver code
     public static void main(String[] args) {
-        char board[][] = { { 'x', 'o', 'x' }, { 'o', 'o', 'x' }, { '_', '_', '_' } };
+        char board[][] = { { 'O', 'X', '_' }, { '_', 'X', '_' }, { '_', '_', '_' } };
 
         Move bestMove = findBestMove(board);
 
