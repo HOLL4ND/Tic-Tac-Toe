@@ -162,10 +162,8 @@ public class TicTacToeServer {
             while (true) {
                 Socket receiveSocket;
                 receiveSocket = listener.accept();// 等待客户端的连接
-                System.out.println("test 123");
-
                 disResult = distriSocket(receiveSocket);// 判断用户选择的游戏模式,并将收到的socket传入对应的线程
-                System.out.println("disResult:" + disResult);
+
                 switch (disResult) {
                     case 1:// 人人对战
                         pvpgame.newInSocket = receiveSocket;
